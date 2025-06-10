@@ -1,0 +1,130 @@
+from pathlib import Path
+import pandas as pd
+
+datadir = Path('../../datadir')
+featdir = Path('video_features')
+featdir.mkdir(exist_ok=True)
+
+df_info = pd.read_csv(datadir / 'participant_info.csv')
+df_feature_key = pd.read_csv(datadir / 'feature_key.csv')
+
+activities = ['run', 'walk', 'tug', '5xsts',
+              'brooke', 'arm_rom', 'curls', 'toe_stand', 'jump']
+
+def feature_filename(ID, day, activity):
+    return f'{featdir}/{activity}/{ID}__{day}__{activity}.csv'
+
+# get list of all output feature files
+FEAT_FILES = []
+for activity in activities:
+    FEAT_FILES += df_info.apply(
+        lambda row: feature_filename(row.ID, row.day, activity),
+        axis=1).to_list()
+
+# skip files that do not exist; will be patched with zeros
+df_zeros = pd.read_csv('zero_patches.csv')
+for i, row in df_zeros.iterrows():
+    fname = feature_filename(row.ID, row.day, row.activity)
+    if fname in FEAT_FILES:
+        FEAT_FILES.remove(fname)
+
+AGG_FILE = 'video_features.csv'
+FEAT_LIST = df_feature_key.feature_code.to_list()
+
+
+rule all:
+    input:
+        AGG_FILE,
+        FEAT_FILES
+
+rule aggregate:
+    input:
+        datadir,
+        featdir,
+        FEAT_FILES
+    output:
+        AGG_FILE,
+    script:
+        'aggregate.py'
+
+rule run:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+        mot=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.mot',
+        model=datadir/'opencap_data/{ID}/{day}/{activity}/model.osim',
+    output:
+        '{featdir}/run/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_run.py'
+
+rule walk:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+        mot=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.mot',
+        model=datadir/'opencap_data/{ID}/{day}/{activity}/model.osim',
+    output:
+        '{featdir}/walk/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_walk.py'
+
+rule tug:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+    output:
+        '{featdir}/tug/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_tug.py'
+
+rule sts:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+    output:
+        '{featdir}/5xsts/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_5xsts.py'
+
+rule brooke:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+    output:
+        '{featdir}/brooke/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_brooke.py'
+
+rule arm_rom:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+    output:
+        '{featdir}/arm_rom/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_arm_rom.py'
+
+rule curls:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+    output:
+        '{featdir}/curls/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_curls.py'
+
+rule toe_stand:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+        mot=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.mot',
+        model=datadir/'opencap_data/{ID}/{day}/{activity}/model.osim',
+    output:
+        '{featdir}/toe_stand/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_toe_stand.py'
+
+rule jump:
+    input:
+        trc=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.trc',
+        mot=datadir/'opencap_data/{ID}/{day}/{activity}/{activity}.mot',
+        model=datadir/'opencap_data/{ID}/{day}/{activity}/model.osim',
+    output:
+        '{featdir}/jump/{ID}__{day}__{activity}.csv'
+    script:
+        'featurize_jump.py'
+
+
